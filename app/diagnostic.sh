@@ -57,13 +57,17 @@ network_check() {
     echo "======================================"
     echo "Host: $host"
 
-    if ! command -v getent >/dev/null 2>&1; then
-        echo "Error: required command 'getent' is not available."
-        return 1
-    fi
-
     local address
+
+if command -v getent >/dev/null 2>&1; then
     address=$(getent hosts "$host" 2>/dev/null | awk 'NR==1 {print $1}')
+elif command -v dscacheutil >/dev/null 2>&1; then
+    address=$(dscacheutil -q host -a name "$host" 2>/dev/null \
+        | awk '/^ip_address:/ {print $2; exit}')
+else
+    echo "Error: no supported hostname resolution command is available."
+    return 1
+fi
 
     if [[ -z "$address" ]]; then
         echo "Error: unable to resolve host: $host"
